@@ -9,6 +9,7 @@ import org.mvnsearch.boot.npm.export.rsocket.generator.RSocketServiceJavaScriptS
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,36 +39,38 @@ public class NpmRSocketExportController {
         if (packageName.startsWith("/")) {
             packageName = packageName.substring(1);
         }
-        String controllerClassName = packageName.substring(packageName.lastIndexOf("/") + 1);
-        Object controllerBean = getControllerBean(controllerClassName);
-        if (controllerBean != null) {
+        String rsocketServiceName = packageName.substring(packageName.lastIndexOf("/") + 1);
+        Object serviceBean = getServiceBean(rsocketServiceName);
+        if (serviceBean != null) {
             @NotNull
-            MessageMapping messageMapping = controllerBean.getClass().getAnnotation(MessageMapping.class);
+            MessageMapping messageMapping = serviceBean.getClass().getAnnotation(MessageMapping.class);
             String version = new SimpleDateFormat("yyyy.MM.dd").format(new Date());
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             GzipCompressorOutputStream gzOut = new GzipCompressorOutputStream(bos);
             TarArchiveOutputStream tgzOut = new TarArchiveOutputStream(gzOut);
             //package.json
             PackageJsonGenerator jsonGenerator = new PackageJsonGenerator(packageName, version);
-            jsonGenerator.addContext("description", "npm package to call " + controllerClassName + " REST API from " + env.getProperty("spring.application.name") + " Spring Boot App");
-            addBinaryToTarGz(tgzOut, controllerClassName + "/package.json", jsonGenerator.generate().getBytes(StandardCharsets.UTF_8));
+            jsonGenerator.addContext("description", "npm package to call RSocket " + rsocketServiceName + " from " + env.getProperty("spring.application.name") + " Spring Boot App");
+            addBinaryToTarGz(tgzOut, rsocketServiceName + "/package.json", jsonGenerator.generate().getBytes(StandardCharsets.UTF_8));
             //index.js
-            RSocketServiceJavaScriptStubGenerator jsGenerator = new RSocketServiceJavaScriptStubGenerator(controllerBean.getClass());
-            addBinaryToTarGz(tgzOut, controllerClassName + "/index.js", jsGenerator.generate(messageMapping.value()[0]).getBytes(StandardCharsets.UTF_8));
+            RSocketServiceJavaScriptStubGenerator jsGenerator = new RSocketServiceJavaScriptStubGenerator(serviceBean.getClass());
+            addBinaryToTarGz(tgzOut, rsocketServiceName + "/index.js", jsGenerator.generate(messageMapping.value()[0]).getBytes(StandardCharsets.UTF_8));
             tgzOut.finish();
             tgzOut.close();
             gzOut.close();
             return bos.toByteArray();
         } else {
+            exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND);
             return new byte[]{};
         }
     }
 
-    public Object getControllerBean(String controllerClassName) {
+    public Object getServiceBean(String rsocketServiceName) {
         for (String beanName : applicationContext.getBeanDefinitionNames()) {
             Object bean = applicationContext.getBean(beanName);
             Class<?> clazz = bean.getClass();
-            if (clazz.getSimpleName().equals(controllerClassName) && clazz.getAnnotation(MessageMapping.class) != null) {
+            MessageMapping messageMapping = clazz.getAnnotation(MessageMapping.class);
+            if (messageMapping != null && messageMapping.value().length > 0 && messageMapping.value()[0].endsWith("." + rsocketServiceName)) {
                 return bean;
             }
         }
