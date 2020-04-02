@@ -98,6 +98,7 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
                 "     * @param {string} methodName\n" +
                 "     * @param {Object|number|null} [param]\n" +
                 "     * @return {Promise<Object>}\n" +
+                "     * @private\n" +
                 "     */\n" +
                 "    rsocketRequestResponse(methodName, param) {\n" +
                 "        return this.promiseRSocket.then(rsocket => {\n" +
@@ -118,6 +119,7 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
                 "     * @param {string} methodName\n" +
                 "     * @param {Object|number|null} [param]\n" +
                 "     * @return {Promise<boolean>}\n" +
+                "     * @private\n" +
                 "     */\n" +
                 "    rsocketFireAndForget(methodName, param) {\n" +
                 "        return this.promiseRSocket.then(rsocket => {\n" +
@@ -140,6 +142,7 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
                 "     * @param {string} methodName\n" +
                 "     * @param {Object|number|null} [param]\n" +
                 "     * @return {Observable<Object>}\n" +
+                "     * @private\n" +
                 "     */\n" +
                 "    rsocketRequestStream(methodName, param) {\n" +
                 "        return new Observable(subscriber => {\n" +
@@ -162,6 +165,7 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
                 "     * @param {string} methodName\n" +
                 "     * @param {Array|Observable|Flowable} [param]\n" +
                 "     * @return {Observable<Object>}\n" +
+                "     * @private\n" +
                 "     */\n" +
                 "    rsocketRequestChannel(methodName, param) {\n" +
                 "        let fluxData = null;\n" +
