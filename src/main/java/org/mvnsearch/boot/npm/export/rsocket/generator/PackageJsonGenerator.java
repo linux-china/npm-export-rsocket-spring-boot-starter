@@ -22,7 +22,8 @@ public class PackageJsonGenerator {
             "    \"rsocket-core\": \"0.0.19\",\n" +
             "    \"rsocket-flowable\": \"^0.0.14\",\n" +
             "    \"rsocket-types\": \"^0.0.16\",\n" +
-            "    \"rsocket-websocket-client\": \"0.0.19\"\n" +
+            "    \"rsocket-websocket-client\": \"0.0.19\",\n" +
+            "    \"rxjs\": \"^6.5.4\"\n" +
             "  }\n" +
             "}\n";
     private Map<String, String> context = new HashMap<>();
