@@ -3,11 +3,13 @@ package org.mvnsearch.boot.npm.export.rsocket;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
-import org.mvnsearch.boot.npm.export.rsocket.generator.ControllerJavaScriptStubGenerator;
+import org.jetbrains.annotations.NotNull;
 import org.mvnsearch.boot.npm.export.rsocket.generator.PackageJsonGenerator;
+import org.mvnsearch.boot.npm.export.rsocket.generator.RSocketServiceJavaScriptStubGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,8 +41,8 @@ public class NpmRSocketExportController {
         String controllerClassName = packageName.substring(packageName.lastIndexOf("/") + 1);
         Object controllerBean = getControllerBean(controllerClassName);
         if (controllerBean != null) {
-            String uri = exchange.getRequest().getURI().toString();
-            String baseUrl = uri.substring(0, uri.indexOf("/", 9));
+            @NotNull
+            MessageMapping messageMapping = controllerBean.getClass().getAnnotation(MessageMapping.class);
             String version = new SimpleDateFormat("yyyy.MM.dd").format(new Date());
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             GzipCompressorOutputStream gzOut = new GzipCompressorOutputStream(bos);
@@ -50,8 +52,8 @@ public class NpmRSocketExportController {
             jsonGenerator.addContext("description", "npm package to call " + controllerClassName + " REST API from " + env.getProperty("spring.application.name") + " Spring Boot App");
             addBinaryToTarGz(tgzOut, controllerClassName + "/package.json", jsonGenerator.generate().getBytes(StandardCharsets.UTF_8));
             //index.js
-            ControllerJavaScriptStubGenerator jsGenerator = new ControllerJavaScriptStubGenerator(controllerBean.getClass());
-            addBinaryToTarGz(tgzOut, controllerClassName + "/index.js", jsGenerator.generate(baseUrl).getBytes(StandardCharsets.UTF_8));
+            RSocketServiceJavaScriptStubGenerator jsGenerator = new RSocketServiceJavaScriptStubGenerator(controllerBean.getClass());
+            addBinaryToTarGz(tgzOut, controllerClassName + "/index.js", jsGenerator.generate(messageMapping.value()[0]).getBytes(StandardCharsets.UTF_8));
             tgzOut.finish();
             tgzOut.close();
             gzOut.close();
@@ -64,7 +66,8 @@ public class NpmRSocketExportController {
     public Object getControllerBean(String controllerClassName) {
         for (String beanName : applicationContext.getBeanDefinitionNames()) {
             Object bean = applicationContext.getBean(beanName);
-            if (bean.getClass().getSimpleName().equals(controllerClassName)) {
+            Class<?> clazz = bean.getClass();
+            if (clazz.getSimpleName().equals(controllerClassName) && clazz.getAnnotation(MessageMapping.class) != null) {
                 return bean;
             }
         }
