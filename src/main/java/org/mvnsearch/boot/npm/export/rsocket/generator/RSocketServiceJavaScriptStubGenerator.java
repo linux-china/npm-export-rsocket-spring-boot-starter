@@ -355,13 +355,13 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
             requestParams = "," + paramsDeclare;
         }
         if (stubMethod.getFrameType() == FrameType.REQUEST_CHANNEL) {
-            builder.append(indent).append("  return this.rsocketRequestResponse('" + stubMethod.getName() + "'" + requestParams + ");\n");
+            builder.append(indent).append("  return this.rsocketRequestChannel('" + stubMethod.getName() + "'" + requestParams + ");\n");
         } else if (stubMethod.getFrameType() == FrameType.REQUEST_STREAM) {
             builder.append(indent).append("  return this.rsocketRequestStream('" + stubMethod.getName() + "'" + requestParams + ");\n");
         } else if (stubMethod.getFrameType() == FrameType.REQUEST_FNF) {
             builder.append(indent).append("  return this.rsocketFireAndForget('" + stubMethod.getName() + "'" + requestParams + ");\n");
         } else {
-            builder.append(indent).append("  return this.rsocketRequestChannel('" + stubMethod.getName() + "'" + requestParams + ");\n");
+            builder.append(indent).append("  return this.rsocketRequestResponse('" + stubMethod.getName() + "'" + requestParams + ");\n");
         }
         builder.append(indent).append("}\n");
         return builder.toString();
