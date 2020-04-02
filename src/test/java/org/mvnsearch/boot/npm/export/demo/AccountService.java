@@ -12,6 +12,8 @@ public interface AccountService {
 
     Mono<Account> findById(Integer id);
 
+    Mono<Account> findByNick(String nick);
+
     Flux<Account> findAll();
 
 }

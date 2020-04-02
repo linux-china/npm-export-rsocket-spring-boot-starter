@@ -22,6 +22,12 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @MessageMapping("findByNick")
+    public Mono<Account> findByNick(String nick) {
+        return Mono.just(new Account(1, nick));
+    }
+
+    @Override
     @MessageMapping("findAll")
     public Flux<Account> findAll() {
         return Flux.just(new Account(1, "Jackie"), new Account(2, "Tom"));
