@@ -44,6 +44,7 @@ class AccountService {
      * @param {string} methodName
      * @param {Object|number|null} [param]
      * @return {Promise<Object>}
+     * @private
      */
     rsocketRequestResponse(methodName, param) {
         return this.promiseRSocket.then(rsocket => {
@@ -64,6 +65,7 @@ class AccountService {
      * @param {string} methodName
      * @param {Object|number|null} [param]
      * @return {Promise<boolean>}
+     * @private
      */
     rsocketFireAndForget(methodName, param) {
         return this.promiseRSocket.then(rsocket => {
@@ -86,6 +88,7 @@ class AccountService {
      * @param {string} methodName
      * @param {Object|number|null} [param]
      * @return {Observable<Object>}
+     * @private
      */
     rsocketRequestStream(methodName, param) {
         return new Observable(subscriber => {
@@ -108,6 +111,7 @@ class AccountService {
      * @param {string} methodName
      * @param {Array|Observable|Flowable} [param]
      * @return {Observable<Object>}
+     * @private
      */
     rsocketRequestChannel(methodName, param) {
         let fluxData = null;
