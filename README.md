@@ -80,3 +80,4 @@ rsocketClient.js, please refer https://github.com/linux-china/npm-export-rsocket
 * Spring RSocket: https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html#rsocket
 * Apache Commons Compress: http://commons.apache.org/proper/commons-compress/
 * JSDoc 3: https://jsdoc.app/
+* 10 Ways to Level Up Your Knowledge of Promises in JavaScript/ES6: https://medium.com/javascript-in-plain-english/10-ways-to-level-up-your-knowledge-of-promises-in-javascript-d53d25a27645
