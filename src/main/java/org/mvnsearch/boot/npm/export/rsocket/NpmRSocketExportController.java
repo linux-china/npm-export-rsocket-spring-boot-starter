@@ -6,6 +6,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.mvnsearch.boot.npm.export.rsocket.generator.PackageJsonGenerator;
 import org.mvnsearch.boot.npm.export.rsocket.generator.RSocketServiceJavaScriptStubGenerator;
+import org.mvnsearch.boot.npm.export.rsocket.generator.TypeScriptDeclarationGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
@@ -55,6 +56,9 @@ public class NpmRSocketExportController {
             //index.js
             RSocketServiceJavaScriptStubGenerator jsGenerator = new RSocketServiceJavaScriptStubGenerator(serviceBean.getClass());
             addBinaryToTarGz(tgzOut, rsocketServiceName + "/index.js", jsGenerator.generate(messageMapping.value()[0]).getBytes(StandardCharsets.UTF_8));
+            //index.d.ts
+            TypeScriptDeclarationGenerator tsGenerator = new TypeScriptDeclarationGenerator(serviceBean.getClass());
+            addBinaryToTarGz(tgzOut, rsocketServiceName + "/index.d.ts", tsGenerator.generate().getBytes(StandardCharsets.UTF_8));
             tgzOut.finish();
             tgzOut.close();
             gzOut.close();
