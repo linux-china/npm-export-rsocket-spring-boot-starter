@@ -2,20 +2,12 @@ package org.mvnsearch.boot.npm.export.rsocket.generator;
 
 import io.rsocket.frame.FrameType;
 import org.intellij.lang.annotations.Language;
-import org.jetbrains.annotations.Nullable;
-import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.annotation.MergedAnnotation;
-import org.springframework.core.annotation.MergedAnnotations;
-import org.springframework.core.annotation.RepeatableContainers;
-import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.ValueConstants;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -24,30 +16,9 @@ import java.util.stream.Collectors;
  * @author linux_china
  */
 @SuppressWarnings("StringConcatenationInsideStringBufferAppend")
-public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConverter {
-    private final Class<?> serviceClassImpl;
-    private final String jsClassName;
-    private final List<Method> requestMethods;
-    private final List<JsRSocketStubMethod> jsHttpStubMethods;
-    /**
-     * javabean for typeDef from @Schema implementation
-     */
-    private final Map<Class<?>, String> javaBeanTypeDefMap = new HashMap<>();
-    /**
-     * customized typedef from @Schema properties
-     */
-    private Map<String, JSDocTypeDef> customizedTypeDefMap = new HashMap<>();
-    private String basePath;
-
+public class RSocketServiceJavaScriptStubGenerator extends BaseGenerator implements JavaToJsTypeConverter {
     public RSocketServiceJavaScriptStubGenerator(Class<?> serviceClassImpl) {
-        this.serviceClassImpl = serviceClassImpl;
-        this.requestMethods = Arrays.stream(this.serviceClassImpl.getMethods())
-                .filter(method -> AnnotationUtils.findAnnotation(method, MessageMapping.class) != null)
-                .collect(Collectors.toList());
-        this.jsHttpStubMethods = this.requestMethods.stream()
-                .map(this::generateMethodStub)
-                .collect(Collectors.toList());
-        this.jsClassName = serviceClassImpl.getSimpleName().replace("Impl", "");
+        super(serviceClassImpl);
     }
 
     public String generate(String serviceName) {
@@ -231,76 +202,6 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
         return builder.toString();
     }
 
-    public JsRSocketStubMethod generateMethodStub(Method method) {
-        JsRSocketStubMethod stubMethod = new JsRSocketStubMethod();
-        stubMethod.setName(method.getName());
-        //@deprecated
-        Deprecated deprecated = method.getAnnotation(Deprecated.class);
-        if (deprecated != null) {
-            stubMethod.setDeprecated(true);
-        }
-        //parameters
-        Parameter[] parameters = method.getParameters();
-        if (parameters.length > 0) {
-            for (Parameter parameter : parameters) {
-                JsParam jsParam = new JsParam();
-                jsParam.setName(parameter.getName());
-                jsParam.setType(parameter.getType());
-                stubMethod.addParam(jsParam);
-            }
-        }
-        //return type
-        Type genericReturnType = method.getGenericReturnType();
-        stubMethod.setReturnType(parseInferredClass(genericReturnType));
-        //frame type
-        //bi direction check: param's type is Flux for 1st param or 2nd param
-        int paramCount = method.getParameterCount();
-        FrameType rsocketFrameType = null;
-        if (paramCount == 1 && method.getParameterTypes()[0].equals(Flux.class)) {
-            rsocketFrameType = FrameType.REQUEST_CHANNEL;
-        } else if (paramCount == 2 && method.getParameterTypes()[1].equals(Flux.class)) {
-            rsocketFrameType = FrameType.REQUEST_CHANNEL;
-        }
-        if (rsocketFrameType == FrameType.REQUEST_CHANNEL) {
-            if (method.getReturnType().isAssignableFrom(Mono.class)) {
-                stubMethod.setMonoChannel(true);
-            }
-        }
-        if (rsocketFrameType == null) {
-            Class<?> returnType = method.getReturnType();
-            // fire_and_forget
-            if (returnType.equals(Void.TYPE) || (returnType.equals(Mono.class) && stubMethod.getReturnType().equals(Void.TYPE))) {
-                rsocketFrameType = FrameType.REQUEST_FNF;
-            } else if (returnType.equals(Flux.class)) {  // request/stream
-                rsocketFrameType = FrameType.REQUEST_STREAM;
-            } else { //request/response
-                rsocketFrameType = FrameType.REQUEST_RESPONSE;
-            }
-        }
-        stubMethod.setFrameType(rsocketFrameType);
-        return stubMethod;
-    }
-
-    public static Class<?> parseInferredClass(Type genericType) {
-        Class<?> inferredClass = null;
-        if (genericType instanceof ParameterizedType) {
-            ParameterizedType type = (ParameterizedType) genericType;
-            Type[] typeArguments = type.getActualTypeArguments();
-            if (typeArguments.length > 0) {
-                final Type typeArgument = typeArguments[0];
-                if (typeArgument instanceof ParameterizedType) {
-                    inferredClass = (Class<?>) ((ParameterizedType) typeArgument).getActualTypeArguments()[0];
-                } else {
-                    inferredClass = (Class<?>) typeArgument;
-                }
-            }
-        }
-        if (inferredClass == null && genericType instanceof Class) {
-            inferredClass = (Class<?>) genericType;
-        }
-        return inferredClass;
-    }
-
     public String toJsCode(JsRSocketStubMethod stubMethod, String indent) {
         StringBuilder builder = new StringBuilder();
         builder.append(indent).append("/**\n");
@@ -324,10 +225,6 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
                 } else {  //optional
                     builder.append(indent).append("* @param {" + param.getJsType() + "} [" + param.getName() + "]\n");
                 }
-            }
-            JSDocTypeDef jsDocTypeDef = param.getJsDocTypeDef();
-            if (jsDocTypeDef != null) {
-                this.customizedTypeDefMap.put(jsDocTypeDef.getName(), jsDocTypeDef);
             }
         }
         String jsReturnType = stubMethod.getJsReturnType();
@@ -383,33 +280,7 @@ public class RSocketServiceJavaScriptStubGenerator implements JavaToJsTypeConver
             }
             builder.append("*/\n");
         }
-        //@typeDef for return type and parameter type
-        Map<String, JSDocTypeDef> allTypeDefMap = new HashMap<>(this.customizedTypeDefMap);
-        Map<String, JSDocTypeDef> typeDefForReturnTypeMap = jsHttpStubMethods.stream()
-                .map(JsRSocketStubMethod::getJsDocTypeDef)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(JSDocTypeDef::getName, jsDocTypeDef -> jsDocTypeDef, (a, b) -> b));
-        allTypeDefMap.putAll(typeDefForReturnTypeMap);
-        for (JSDocTypeDef jsDocTypeDef : allTypeDefMap.values()) {
-            builder.append("/**\n");
-            builder.append("* @typedef {Object} " + jsDocTypeDef.getName() + "\n");
-            for (String property : jsDocTypeDef.getProperties()) {
-                builder.append("* @property " + property + "\n");
-            }
-            builder.append("*/\n");
-        }
         return builder.toString();
-    }
-
-    @Nullable
-    public static <A extends Annotation> A findAnnotationWithAttributesMerged(AnnotatedElement element, Class<A> annotationType) {
-        A annotation = AnnotationUtils.findAnnotation(element, annotationType);
-        if (annotation != null) {
-            annotation = MergedAnnotations.from(element, MergedAnnotations.SearchStrategy.INHERITED_ANNOTATIONS, RepeatableContainers.none())
-                    .get(annotationType)
-                    .synthesize(MergedAnnotation::isPresent).orElse(null);
-        }
-        return annotation;
     }
 
 }
