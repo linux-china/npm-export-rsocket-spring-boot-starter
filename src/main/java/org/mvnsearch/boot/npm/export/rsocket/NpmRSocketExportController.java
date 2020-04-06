@@ -3,6 +3,7 @@ package org.mvnsearch.boot.npm.export.rsocket;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.mvnsearch.boot.npm.export.rsocket.generator.PackageJsonGenerator;
 import org.mvnsearch.boot.npm.export.rsocket.generator.RSocketServiceJavaScriptStubGenerator;
@@ -21,7 +22,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * npm export Controller
@@ -67,6 +70,55 @@ public class NpmRSocketExportController {
             exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND);
             return new byte[]{};
         }
+    }
+
+    @GetMapping(value = "/npm/packages", produces = "text/markdown")
+    public String npmPackages(ServerWebExchange exchange) {
+        List<String> npmPackages = new ArrayList<>();
+        for (String beanName : applicationContext.getBeanDefinitionNames()) {
+            Object bean = applicationContext.getBean(beanName);
+            Class<?> beanClass = bean.getClass();
+            NpmPackage npmPackage = beanClass.getAnnotation(NpmPackage.class);
+            if (npmPackage != null) {
+                npmPackages.add(npmPackage.value());
+            }
+        }
+        String uri = exchange.getRequest().getURI().toString();
+        String baseUrl = uri.substring(0, uri.indexOf("/", 9));
+        StringBuilder builder = new StringBuilder();
+        builder.append("# NPM Packages\n\n");
+        builder.append("```json\n");
+        builder.append("\"dependencies\": {\n");
+        for (String npmPackage : npmPackages) {
+            builder.append("  \"" + npmPackage + "\": \"" + baseUrl + "/npm/" + npmPackage + "\",\n");
+        }
+        builder.append("}\n");
+        builder.append("```\n\n");
+        @Language("Markdown")
+        String howToUse = "# How to use?\n" +
+                "\n" +
+                "* Include dependency in your package.json and run \"yarn install\"\n" +
+                "\n" +
+                "```\n" +
+                " \"dependencies\": {\n" +
+                "    \"@UserService/UserController\": \"http://localhost:8080/npm/@UserService/UserController\"\n" +
+                "  }\n" +
+                "```\n" +
+                "\n" +
+                "* Call service api in your JS code:\n" +
+                "\n" +
+                "```\n" +
+                "const promiseRSocket = require(\"./rsocketClient\").connect(\"ws://localhost:8080/rsocket\")\n" +
+                "const accountService = require(\"@UserService/AccountService\").setPromiseRSocket(promiseRSocket);\n" +
+                "\n" +
+                "(async () => {\n" +
+                "    let account = await accountService.findById(1);\n" +
+                "    console.log(account);\n" +
+                "})();" +
+                "\n" +
+                "```";
+        builder.append(howToUse);
+        return builder.toString();
     }
 
     public Object getServiceBean(String rsocketServiceName) {
