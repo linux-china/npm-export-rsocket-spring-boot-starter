@@ -65,6 +65,14 @@ public class RSocketServiceJavaScriptStubGenerator extends BaseGenerator impleme
                 "    }\n" +
                 "\n" +
                 "    /**\n" +
+                "     * default for TypeScript\n" +
+                "     * @returns {XxxxService}\n" +
+                "     */\n" +
+                "    get default() {\n" +
+                "        return this;\n" +
+                "    }" +
+                "\n" +
+                "    /**\n" +
                 "     * rsocket requestResponse\n" +
                 "     * @param {string} methodName\n" +
                 "     * @param {Object|number|null} [param]\n" +
