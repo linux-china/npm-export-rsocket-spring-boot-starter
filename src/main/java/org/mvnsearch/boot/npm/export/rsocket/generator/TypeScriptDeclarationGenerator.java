@@ -1,5 +1,7 @@
 package org.mvnsearch.boot.npm.export.rsocket.generator;
 
+import org.intellij.lang.annotations.Language;
+
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,23 +18,29 @@ public class TypeScriptDeclarationGenerator extends BaseGenerator implements Jav
     }
 
     public String generate() {
-        String global = "/**\n" +
-                " * set Promise RSocket\n" +
-                " * @param promiseRSocket Promise RSocket\n" +
-                " */\n" +
-                "export function setPromiseRSocket(promiseRSocket: Promise<any>): void;\n\n";
+        @Language(value = "TypeScript", suffix = "}")
+        String global = "declare interface XxxService {\n" +
+                "    /**\n" +
+                "     * set Promise RSocket\n" +
+                "     * @param promiseRSocket Promise RSocket\n" +
+                "     */\n" +
+                "    setPromiseRSocket(promiseRSocket: Promise<any>): XxxService;\n\n";
         StringBuilder builder = new StringBuilder();
-        builder.append(global);
+        builder.append(global.replaceAll("XxxService", jsClassName));
         for (JsRSocketStubMethod stubMethod : jsHttpStubMethods) {
             builder.append(toTypeScriptDeclarationMethod(stubMethod) + "\n\n");
         }
+        builder.append("}\n\n");
+        builder.append("declare const rsocketService: " + jsClassName + ";\n" +
+                "export default rsocketService;\n\n");
+        builder.append("export function setPromiseRSocket(promiseRSocket: Promise<any>): " + jsClassName + ";\n\n");
         builder.append(typeScriptClasses());
         return builder.toString();
     }
 
     public String toTypeScriptDeclarationMethod(JsRSocketStubMethod stubMethod) {
         StringBuilder builder = new StringBuilder();
-        builder.append("export function " + stubMethod.getName() + "(");
+        builder.append("    " + stubMethod.getName() + "(");
         if (!stubMethod.getParams().isEmpty()) {
             String paramsDeclare = stubMethod.getParams().stream()
                     .map(param -> param.getName() + ": " + toTsType(param.getJsType()))
